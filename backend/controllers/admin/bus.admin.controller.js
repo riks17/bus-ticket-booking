@@ -57,6 +57,12 @@ exports.resetBus = async (req, res, next) => {
       { status: "CANCELLED" }
     );
 
+    // --- Socket Implementation ---
+    // Notify all connected clients that this bus has been reset
+    const io = req.app.get("io");
+    io.emit("busReset", { busId: req.params.busId });
+    // -----------------------------
+
     res.status(200).json({
       message: "Bus reset successfully",
     });

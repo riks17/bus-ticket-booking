@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
+import { io } from "socket.io-client"; // Import socket.io-client
 import { getJourneyDetails, bookSeat } from "../../api/bus.api";
 
 export default function BusDetails() {
@@ -20,10 +21,61 @@ export default function BusDetails() {
     }
   };
 
+  // Initial Fetch
   useEffect(() => {
     fetchJourney();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journeyId]);
+
+  // --- WebSocket Implementation ---
+  useEffect(() => {
+    // Connect to the backend
+    const socket = io("http://localhost:5001");
+
+    // Listen for seat updates (Booking or Cancellation)
+    socket.on("seatUpdate", ({ journeyId: updatedJourneyId, seatNumber, action }) => {
+      // Only update if the event belongs to the current journey
+      if (updatedJourneyId === journeyId) {
+        setJourney((prev) => {
+          if (!prev || !prev.bus || !prev.bus.seats) return prev;
+          
+          return {
+            ...prev,
+            bus: {
+              ...prev.bus,
+              seats: prev.bus.seats.map((seat) =>
+                seat.seatNumber === seatNumber
+                  ? { ...seat, isBooked: action === "BOOKED" }
+                  : seat
+              ),
+            },
+          };
+        });
+      }
+    });
+
+    // Listen for Bus Reset (Admin Action)
+    socket.on("busReset", ({ busId }) => {
+      setJourney((prev) => {
+        // Only update if the reset bus matches the current journey's bus
+        if (!prev || !prev.bus || prev.bus._id !== busId) return prev;
+
+        return {
+          ...prev,
+          bus: {
+            ...prev.bus,
+            seats: prev.bus.seats.map((seat) => ({ ...seat, isBooked: false })),
+          },
+        };
+      });
+    });
+
+    // Cleanup on unmount
+    return () => {
+      socket.disconnect();
+    };
+  }, [journeyId]);
+  // --------------------------------
 
   const handleBookSeat = async (seatNumber) => {
     if (!window.confirm(`Book seat ${seatNumber}?`)) return;
@@ -31,7 +83,9 @@ export default function BusDetails() {
     setBookingSeat(seatNumber);
     try {
       await bookSeat({ journeyId, seatNumber });
-      await fetchJourney();
+      // Note: We don't strictly need fetchJourney() here because the socket 
+      // will update the UI, but keeping it ensures state consistency.
+      await fetchJourney(); 
       alert(`Seat ${seatNumber} booked successfully!`);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to book seat");

@@ -47,6 +47,17 @@ exports.bookSeat = async (req, res, next) => {
       seatNumber,
     });
 
+    // --- Socket Implementation ---
+    // Emit event to all clients to update the seat map instantly
+    const io = req.app.get("io");
+    io.emit("seatUpdate", {
+      busId: bus._id,
+      journeyId: journeyId, // Included in case frontend tracks by Journey ID
+      seatNumber,
+      action: "BOOKED",
+    });
+    // -----------------------------
+
     res.status(201).json({
       message: "Seat booked successfully",
       booking,
@@ -117,6 +128,17 @@ exports.cancelBooking = async (req, res, next) => {
 
     await bus.save();
     await booking.save();
+
+    // --- Socket Implementation ---
+    // Emit event to release the seat instantly for other users
+    const io = req.app.get("io");
+    io.emit("seatUpdate", {
+      busId: booking.bus,
+      journeyId: booking.journey, // Pass journeyId if available in booking model
+      seatNumber: booking.seatNumber,
+      action: "CANCELLED",
+    });
+    // -----------------------------
 
     res.status(200).json({ message: "Booking cancelled successfully" });
   } catch (err) {
