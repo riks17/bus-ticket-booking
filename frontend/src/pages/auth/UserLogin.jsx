@@ -19,7 +19,7 @@ export default function UserLogin() {
     try {
       const res = await userLogin({ email, password });
       login(res.data.token, "user");
-      navigate("/buses");
+      navigate("/journeys");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
     } finally {

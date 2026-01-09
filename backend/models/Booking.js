@@ -13,12 +13,15 @@ const bookingSchema = new mongoose.Schema(
       ref: "Bus",
       required: true,
     },
-
+    journey: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Journey",
+      required: true,
+    },
     seatNumber: {
       type: String,
       required: true,
     },
-
     status: {
       type: String,
       enum: ["BOOKED", "CANCELLED"],

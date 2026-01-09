@@ -21,7 +21,7 @@ export default function AdminSignup() {
 
     try {
       const res = await adminSignup(form);
-      login(res.data.token, "user");
+      login(res.data.token, "admin");
       navigate("/buses");
     } catch (err) {
       setError(err.response?.data?.message || "Signup failed. Please try again.");

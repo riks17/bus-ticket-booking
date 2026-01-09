@@ -48,7 +48,7 @@ export default function MyTickets() {
       <div style={styles.header}>
         <h2 style={styles.title}>My Tickets</h2>
         <div style={styles.nav}>
-          <Link to="/buses" style={styles.navLink}>Browse Buses</Link>
+          <Link to="/journeys" style={styles.navLink}>Browse Journeys</Link>
           <button onClick={logout} style={styles.logoutBtn}>Logout</button>
         </div>
       </div>
@@ -58,21 +58,21 @@ export default function MyTickets() {
       ) : tickets.length === 0 ? (
         <div style={styles.empty}>
           <p>You don't have any active bookings.</p>
-          <Link to="/buses" style={styles.browseLink}>Browse Buses</Link>
+          <Link to="/journeys" style={styles.browseLink}>Browse Journeys</Link>
         </div>
       ) : (
         <div style={styles.ticketList}>
           {tickets.map((t) => (
             <div key={t._id} style={styles.ticketCard}>
               <div style={styles.ticketHeader}>
-                <h3 style={styles.busNumber}>{t.bus.busNumber}</h3>
+                <h3 style={styles.busNumber}>{t.bus?.busNumber}</h3>
                 <span style={styles.status}>{t.status}</span>
               </div>
               <div style={styles.ticketInfo}>
                 <div style={styles.route}>
-                  <span style={styles.source}>{t.bus.source}</span>
+                  <span style={styles.source}>{t.journey?.source?.name}</span>
                   <span style={styles.arrow}>→</span>
-                  <span style={styles.destination}>{t.bus.destination}</span>
+                  <span style={styles.destination}>{t.journey?.destination?.name}</span>
                 </div>
                 <div style={styles.seatInfo}>
                   <strong>Seat:</strong> {t.seatNumber}

@@ -13,6 +13,8 @@ import MyTickets from "./pages/user/MyTickets";
 import AdminDashboard from "./pages/admin/Dashboard";
 import CreateBus from "./pages/admin/CreateBus";
 import SalesReport from "./pages/admin/SalesReport";
+import Locations from "./pages/admin/Locations";
+import Journeys from "./pages/admin/Journeys";
 
 import PrivateRoute from "./auth/PrivateRoute";
 import AdminRoute from "./auth/AdminRoute";
@@ -30,15 +32,17 @@ function App() {
 
           {/* User */}
           <Route element={<PrivateRoute />}>
-            <Route path="/buses" element={<BusList />} />
-            <Route path="/buses/:busId" element={<BusDetails />} />
+            <Route path="/journeys" element={<BusList />} />
+            <Route path="/journeys/:journeyId" element={<BusDetails />} />
             <Route path="/my-tickets" element={<MyTickets />} />
           </Route>
 
           {/* Admin */}
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/create-bus" element={<CreateBus />} />
+            <Route path="/admin/buses" element={<CreateBus />} />
+            <Route path="/admin/locations" element={<Locations />} />
+            <Route path="/admin/journeys" element={<Journeys />} />
             <Route path="/admin/sales" element={<SalesReport />} />
           </Route>
         </Routes>

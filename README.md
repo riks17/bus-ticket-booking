@@ -6,15 +6,17 @@ A full-stack bus ticket booking application built with MongoDB, Express, React, 
 
 ### User Features
 - User registration and authentication
-- Browse available buses
-- View bus details with seat map
+- Browse available **journeys** (source → destination)
+- View journey seat map with real bus layout (aisle + rows)
 - Book available seats
 - View booking history (My Tickets)
 - Cancel bookings
 
 ### Admin Features
 - Admin authentication
-- Create new buses with custom seat layouts
+- Manage locations (pickup/drop points)
+- Create physical buses (capacity options: 16, 20, 28, 40) with auto-generated seat layouts
+- Create journeys by assigning buses to routes (with auto-fill helpers)
 - View all bookings (Sales Report)
 - Reset buses (clear all bookings)
 
@@ -64,6 +66,11 @@ npm run dev
 ```
 
 The backend will run on `http://localhost:5001`
+
+### Seed sample data (locations, buses, journeys)
+```bash
+npm run seed
+```
 
 ### Frontend Setup
 
@@ -129,14 +136,19 @@ Make a POST request to `http://localhost:5001/api/auth/admin/signup`:
 - `POST /api/auth/admin/signup` - Admin registration (for testing)
 
 ### User Routes (Protected)
-- `GET /api/user/buses` - Get all buses
-- `GET /api/user/buses/:busId` - Get bus details with seat map
-- `POST /api/user/bookings/book` - Book a seat
+- `GET /api/user/journeys` - Get all journeys
+- `GET /api/user/journeys/:journeyId` - Get journey details with seat map
+- `POST /api/user/bookings/book` - Book a seat on a journey
 - `GET /api/user/bookings/my` - Get user's bookings
 - `PATCH /api/user/bookings/cancel/:bookingId` - Cancel a booking
 
 ### Admin Routes (Protected)
-- `POST /api/admin/buses` - Create a new bus
+- `POST /api/admin/locations` - Create location
+- `GET /api/admin/locations` - List locations
+- `POST /api/admin/buses` - Create a new bus (with seat layout)
+- `GET /api/admin/buses` - List buses
+- `POST /api/admin/journeys` - Create a journey (assign bus + route)
+- `GET /api/admin/journeys` - List journeys
 - `PATCH /api/admin/buses/reset/:busId` - Reset a bus (clear all bookings)
 - `GET /api/admin/reports/bookings` - Get all bookings
 
@@ -169,7 +181,7 @@ bus-ticket-booking/
 - **Authorization**: Role-based access control (RBAC) using middleware
 - **Password Security**: bcrypt password hashing
 - **Error Handling**: Centralized error handling middleware
-- **Data Models**: User, Bus, and Booking models with proper relationships
+- **Data Models**: User, Location, Bus, Journey, and Booking models with proper relationships
 
 ## Testing the Application
 

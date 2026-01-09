@@ -7,7 +7,14 @@ exports.getAllBookings = async (req, res, next) => {
   try {
     const bookings = await Booking.find()
       .populate("user", "name email")
-      .populate("bus", "busNumber source destination")
+      .populate("bus", "busNumber seatCapacity")
+      .populate({
+        path: "journey",
+        populate: [
+          { path: "source", select: "name" },
+          { path: "destination", select: "name" },
+        ],
+      })
       .sort({ createdAt: -1 });
 
     res.status(200).json(bookings);

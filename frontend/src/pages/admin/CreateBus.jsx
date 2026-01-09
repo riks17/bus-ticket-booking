@@ -1,29 +1,36 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { createBus } from "../../api/admin.api";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { createBus, getBuses } from "../../api/admin.api";
 
 export default function CreateBus() {
-  const navigate = useNavigate();
   const [bus, setBus] = useState({
     busNumber: "",
-    source: "",
-    destination: "",
-    totalSeats: "",
+    seatCapacity: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [buses, setBuses] = useState([]);
+
+  const capacityOptions = [16, 20, 28, 40];
+
+  useEffect(() => {
+    const fetchBuses = async () => {
+      try {
+        const res = await getBuses();
+        setBuses(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchBuses();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!bus.busNumber || !bus.source || !bus.destination || !bus.totalSeats) {
-      setError("All fields are required");
-      return;
-    }
-
-    if (bus.totalSeats < 1 || bus.totalSeats > 100) {
-      setError("Total seats must be between 1 and 100");
+    if (!bus.busNumber || !bus.seatCapacity) {
+      setError("Bus number and seat capacity are required");
       return;
     }
 
@@ -32,10 +39,12 @@ export default function CreateBus() {
     try {
       await createBus({
         ...bus,
-        totalSeats: parseInt(bus.totalSeats),
+        seatCapacity: parseInt(bus.seatCapacity),
       });
       alert("Bus created successfully!");
-      navigate("/admin");
+      setBus({ busNumber: "", seatCapacity: "" });
+      const res = await getBuses();
+      setBuses(res.data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create bus");
     } finally {
@@ -62,42 +71,40 @@ export default function CreateBus() {
           />
         </div>
         <div style={styles.formGroup}>
-          <label style={styles.label}>Source</label>
-          <input
+          <label style={styles.label}>Seat Capacity</label>
+          <select
             style={styles.input}
-            placeholder="e.g., New York"
-            value={bus.source}
-            onChange={(e) => setBus({ ...bus, source: e.target.value })}
+            value={bus.seatCapacity}
+            onChange={(e) => setBus({ ...bus, seatCapacity: e.target.value })}
             required
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Destination</label>
-          <input
-            style={styles.input}
-            placeholder="e.g., Los Angeles"
-            value={bus.destination}
-            onChange={(e) => setBus({ ...bus, destination: e.target.value })}
-            required
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Total Seats</label>
-          <input
-            style={styles.input}
-            type="number"
-            min="1"
-            max="100"
-            placeholder="e.g., 40"
-            value={bus.totalSeats}
-            onChange={(e) => setBus({ ...bus, totalSeats: e.target.value })}
-            required
-          />
+          >
+            <option value="">Select capacity</option>
+            {capacityOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt} seats
+              </option>
+            ))}
+          </select>
         </div>
         <button type="submit" style={styles.button} disabled={loading}>
           {loading ? "Creating..." : "Create Bus"}
         </button>
       </form>
+      <div style={styles.listSection}>
+        <h3 style={styles.listTitle}>Existing Buses</h3>
+        {buses.length === 0 ? (
+          <p style={styles.muted}>No buses yet.</p>
+        ) : (
+          <ul style={styles.busList}>
+            {buses.map((b) => (
+              <li key={b._id} style={styles.busItem}>
+                <span>{b.busNumber}</span>
+                <span style={styles.muted}>{b.seatCapacity} seats</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -160,5 +167,32 @@ const styles = {
     borderRadius: "4px",
     fontSize: "1rem",
     cursor: "pointer",
+  },
+  listSection: {
+    marginTop: "2rem",
+    background: "#fff",
+    padding: "1.5rem",
+    borderRadius: "8px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
+  },
+  listTitle: {
+    marginTop: 0,
+  },
+  busList: {
+    listStyle: "none",
+    padding: 0,
+    margin: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+  },
+  busItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    borderBottom: "1px solid #eee",
+    paddingBottom: "0.5rem",
+  },
+  muted: {
+    color: "#666",
   },
 };

@@ -18,13 +18,21 @@ export default function Dashboard() {
         <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
       </div>
       <div style={styles.menu}>
-        <Link to="/admin/create-bus" style={styles.menuCard}>
-          <h3>Create Bus</h3>
-          <p>Add a new bus to the system</p>
+        <Link to="/admin/locations" style={styles.menuCard}>
+          <h3>Manage Locations</h3>
+          <p>Add pickup/drop points</p>
+        </Link>
+        <Link to="/admin/buses" style={styles.menuCard}>
+          <h3>Manage Buses</h3>
+          <p>Create physical buses with capacity</p>
+        </Link>
+        <Link to="/admin/journeys" style={styles.menuCard}>
+          <h3>Create Journey</h3>
+          <p>Assign buses to routes</p>
         </Link>
         <Link to="/admin/sales" style={styles.menuCard}>
           <h3>View Sales Report</h3>
-          <p>View all bookings and manage buses</p>
+          <p>See all bookings and reset buses</p>
         </Link>
       </div>
     </div>

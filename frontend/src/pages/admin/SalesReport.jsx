@@ -45,7 +45,8 @@ export default function SalesReport() {
 
   // Group bookings by bus
   const bookingsByBus = sales.reduce((acc, booking) => {
-    const busId = booking.bus._id;
+    const busId = booking.bus?._id;
+    if (!busId) return acc;
     if (!acc[busId]) {
       acc[busId] = {
         bus: booking.bus,
@@ -75,7 +76,8 @@ export default function SalesReport() {
                 <div>
                   <h3 style={styles.busNumber}>{group.bus.busNumber}</h3>
                   <div style={styles.route}>
-                    {group.bus.source} → {group.bus.destination}
+                    {group.bookings[0]?.journey?.source?.name} →{" "}
+                    {group.bookings[0]?.journey?.destination?.name}
                   </div>
                 </div>
                 <button

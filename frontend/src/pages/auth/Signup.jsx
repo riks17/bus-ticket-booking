@@ -22,7 +22,7 @@ export default function Signup() {
     try {
       const res = await userSignup(form);
       login(res.data.token, "user");
-      navigate("/buses");
+      navigate("/journeys");
     } catch (err) {
       setError(err.response?.data?.message || "Signup failed. Please try again.");
     } finally {

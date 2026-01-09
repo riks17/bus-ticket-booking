@@ -1,154 +1,163 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { io } from "socket.io-client"; // Import socket.io-client
-import { getBusDetails, bookSeat } from "../../api/bus.api";
+import { useParams, Link } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { getJourneyDetails, bookSeat } from "../../api/bus.api";
 
 export default function BusDetails() {
-  const { busId } = useParams();
-  const navigate = useNavigate();
-  const [bus, setBus] = useState(null);
+  const { journeyId } = useParams();
+  const [journey, setJourney] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState(false);
+  const [bookingSeat, setBookingSeat] = useState("");
 
-  // Initial Fetch
+  const fetchJourney = async () => {
+    try {
+      const res = await getJourneyDetails(journeyId);
+      setJourney(res.data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load journey details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchBus = async () => {
-      try {
-        const res = await getBusDetails(busId);
-        setBus(res.data);
-      } catch (err) {
-        setError(err.response?.data?.message || "Failed to load bus details");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBus();
-  }, [busId]);
-
-  // Real-time Updates via Socket.io
-  useEffect(() => {
-    // Connect to the backend server
-    const socket = io("http://localhost:5001"); 
-
-    // Listen for single seat updates (Booking or Cancellation)
-    socket.on("seatUpdate", ({ busId: updatedBusId, seatNumber, action }) => {
-      if (updatedBusId === busId) {
-        setBus((prevBus) => {
-          if (!prevBus) return prevBus;
-          return {
-            ...prevBus,
-            seats: prevBus.seats.map((s) =>
-              s.seatNumber === seatNumber
-                ? { ...s, isBooked: action === "BOOKED" }
-                : s
-            ),
-          };
-        });
-      }
-    });
-
-    // Listen for full bus reset
-    socket.on("busReset", ({ busId: resetBusId }) => {
-      if (resetBusId === busId) {
-        setBus((prevBus) => {
-          if (!prevBus) return prevBus;
-          return {
-            ...prevBus,
-            seats: prevBus.seats.map((s) => ({ ...s, isBooked: false })),
-          };
-        });
-      }
-    });
-
-    // Cleanup on unmount
-    return () => {
-      socket.disconnect();
-    };
-  }, [busId]);
+    fetchJourney();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journeyId]);
 
   const handleBookSeat = async (seatNumber) => {
     if (!window.confirm(`Book seat ${seatNumber}?`)) return;
-
     setError("");
-    setBooking(true);
-
+    setBookingSeat(seatNumber);
     try {
-      await bookSeat({ busId, seatNumber });
-      // Note: We don't strictly need to refetch here anymore because
-      // the socket event will update the UI, but keeping it for safety is fine.
+      await bookSeat({ journeyId, seatNumber });
+      await fetchJourney();
       alert(`Seat ${seatNumber} booked successfully!`);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to book seat");
     } finally {
-      setBooking(false);
+      setBookingSeat("");
     }
   };
+
+  const seatRows = useMemo(() => {
+    if (!journey?.bus?.seats) return [];
+    const rows = journey.bus.seats.reduce((acc, seat) => {
+      const rowKey = seat.row || Number((seat.seatNumber || "0").match(/\d+/)?.[0]);
+      if (!acc[rowKey]) acc[rowKey] = {};
+      acc[rowKey][seat.position] = seat;
+      return acc;
+    }, {});
+
+    const orderedRows = Object.keys(rows)
+      .map(Number)
+      .sort((a, b) => a - b);
+
+    const positionOrder = ["LW", "LA", "RA", "RW"];
+    return orderedRows.map((row) => ({
+      row,
+      seats: positionOrder.map((pos) => rows[row][pos]).filter(Boolean),
+      map: rows[row],
+    }));
+  }, [journey]);
 
   if (loading) {
     return (
       <div style={styles.container}>
-        <div style={styles.loading}>Loading bus details...</div>
+        <div style={styles.loading}>Loading journey details...</div>
       </div>
     );
   }
 
-  if (!bus) {
+  if (!journey) {
     return (
       <div style={styles.container}>
-        <div style={styles.error}>Bus not found</div>
-        <Link to="/buses" style={styles.backLink}>Back to Buses</Link>
+        <div style={styles.error}>Journey not found</div>
+        <Link to="/journeys" style={styles.backLink}>Back to Journeys</Link>
       </div>
     );
   }
 
-  const availableSeats = bus.seats.filter(s => !s.isBooked).length;
-  const bookedSeats = bus.seats.filter(s => s.isBooked).length;
+  const availableSeats =
+    journey.bus?.seats?.filter((s) => !s.isBooked).length ?? 0;
+  const bookedSeats =
+    journey.bus?.seats?.filter((s) => s.isBooked).length ?? 0;
+
+  const renderSeat = (seat) => {
+    if (!seat) return <div style={{ width: "64px" }} />;
+    const disabled = seat.isBooked || !!bookingSeat;
+    return (
+      <button
+        key={seat.seatNumber}
+        style={{
+          ...styles.seat,
+          ...(seat.isBooked ? styles.seatBooked : styles.seatAvailable),
+          ...(bookingSeat === seat.seatNumber ? styles.seatLoading : {}),
+        }}
+        disabled={disabled}
+        onClick={() => handleBookSeat(seat.seatNumber)}
+        title={seat.isBooked ? "Already booked" : `Book ${seat.seatNumber}`}
+      >
+        {seat.seatNumber}
+      </button>
+    );
+  };
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h2 style={styles.title}>{bus.busNumber}</h2>
-        <Link to="/buses" style={styles.backLink}>← Back to Buses</Link>
-      </div>
-      <div style={styles.info}>
-        <div style={styles.route}>
-          <span style={styles.source}>{bus.source}</span>
-          <span style={styles.arrow}>→</span>
-          <span style={styles.destination}>{bus.destination}</span>
+        <div>
+          <h2 style={styles.title}>
+            {journey.source?.name} → {journey.destination?.name}
+          </h2>
+          <div style={styles.subTitle}>Bus: {journey.bus?.busNumber}</div>
         </div>
+        <Link to="/journeys" style={styles.backLink}>← Back to Journeys</Link>
+      </div>
+
+      <div style={styles.info}>
         <div style={styles.stats}>
-          <span>Total Seats: {bus.totalSeats}</span>
+          <span>Capacity: {journey.bus?.seatCapacity}</span>
           <span style={styles.available}>Available: {availableSeats}</span>
           <span style={styles.booked}>Booked: {bookedSeats}</span>
         </div>
       </div>
+
       {error && <div style={styles.error}>{error}</div>}
+
       <div style={styles.seatMap}>
-        <h3 style={styles.seatTitle}>Select a Seat</h3>
-        <div style={styles.seatGrid}>
-          {bus.seats.map((s) => (
-            <button
-              key={s.seatNumber}
-              style={{
-                ...styles.seat,
-                ...(s.isBooked ? styles.seatBooked : styles.seatAvailable),
-              }}
-              disabled={s.isBooked || booking}
-              onClick={() => handleBookSeat(s.seatNumber)}
-              title={s.isBooked ? "Already booked" : `Book ${s.seatNumber}`}
-            >
-              {s.seatNumber}
-            </button>
-          ))}
+        <div style={styles.seatHeader}>
+          <h3 style={styles.seatTitle}>Select a Seat</h3>
+          <span style={styles.frontLabel}>Front</span>
         </div>
+
+        <div style={styles.seatLayout}>
+          {seatRows.map(({ row, map }) => (
+            <div key={row} style={styles.rowWrapper}>
+              <div style={styles.rowLabel}>Row {row}</div>
+              <div style={styles.rowSeats}>
+                <div style={styles.seatGroup}>
+                  {renderSeat(map["LW"])}
+                  {renderSeat(map["LA"])}
+                </div>
+                <div style={styles.aisle}>AISLE</div>
+                <div style={styles.seatGroup}>
+                  {renderSeat(map["RA"])}
+                  {renderSeat(map["RW"])}
+                </div>
+              </div>
+            </div>
+          ))}
+          <div style={styles.backLabel}>Back</div>
+        </div>
+
         <div style={styles.legend}>
           <div style={styles.legendItem}>
-            <div style={{...styles.seat, ...styles.seatAvailable}}></div>
+            <div style={{ ...styles.seat, ...styles.seatAvailable }}></div>
             <span>Available</span>
           </div>
           <div style={styles.legendItem}>
-            <div style={{...styles.seat, ...styles.seatBooked}}></div>
+            <div style={{ ...styles.seat, ...styles.seatBooked }}></div>
             <span>Booked</span>
           </div>
         </div>
@@ -173,6 +182,10 @@ const styles = {
     color: "#333",
     margin: 0,
   },
+  subTitle: {
+    color: "#555",
+    marginTop: "0.25rem",
+  },
   backLink: {
     color: "#007bff",
     textDecoration: "none",
@@ -183,28 +196,11 @@ const styles = {
     borderRadius: "8px",
     marginBottom: "2rem",
   },
-  route: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
-    fontSize: "1.2rem",
-    marginBottom: "0.5rem",
-  },
-  source: {
-    fontWeight: "bold",
-    color: "#007bff",
-  },
-  arrow: {
-    color: "#666",
-  },
-  destination: {
-    fontWeight: "bold",
-    color: "#007bff",
-  },
   stats: {
     display: "flex",
     gap: "1rem",
-    fontSize: "0.9rem",
+    fontSize: "0.95rem",
+    flexWrap: "wrap",
   },
   available: {
     color: "#28a745",
@@ -232,23 +228,58 @@ const styles = {
     borderRadius: "8px",
     boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
   },
+  seatHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "1rem",
+  },
   seatTitle: {
     marginTop: 0,
-    marginBottom: "1.5rem",
+    marginBottom: 0,
     color: "#333",
   },
-  seatGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(60px, 1fr))",
+  seatLayout: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "1rem",
+    marginTop: "1rem",
+  },
+  rowWrapper: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+  },
+  rowLabel: {
+    width: "70px",
+    textAlign: "right",
+    color: "#555",
+    fontWeight: "bold",
+  },
+  rowSeats: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+  },
+  seatGroup: {
+    display: "flex",
     gap: "0.5rem",
-    marginBottom: "2rem",
+  },
+  aisle: {
+    padding: "0.5rem 0.75rem",
+    backgroundColor: "#f1f3f5",
+    color: "#666",
+    borderRadius: "4px",
+    fontSize: "0.85rem",
+    letterSpacing: "0.08em",
   },
   seat: {
+    width: "64px",
     padding: "0.75rem",
     border: "2px solid #ddd",
     borderRadius: "4px",
     cursor: "pointer",
-    fontSize: "0.9rem",
+    fontSize: "0.85rem",
     fontWeight: "bold",
     transition: "all 0.2s",
   },
@@ -263,14 +294,31 @@ const styles = {
     color: "#721c24",
     cursor: "not-allowed",
   },
+  seatLoading: {
+    opacity: 0.6,
+  },
   legend: {
     display: "flex",
     gap: "2rem",
     justifyContent: "center",
+    marginTop: "1.5rem",
   },
   legendItem: {
     display: "flex",
     alignItems: "center",
     gap: "0.5rem",
+  },
+  frontLabel: {
+    backgroundColor: "#e9ecef",
+    padding: "0.25rem 0.75rem",
+    borderRadius: "4px",
+    color: "#555",
+    fontSize: "0.85rem",
+  },
+  backLabel: {
+    alignSelf: "center",
+    color: "#777",
+    fontSize: "0.85rem",
+    marginTop: "0.5rem",
   },
 };

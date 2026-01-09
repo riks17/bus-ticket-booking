@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 
-const busRoutes = require("./bus.routes");
+const journeyRoutes = require("./journey.routes");
 const bookingRoutes = require("./booking.routes");
 
-router.use("/buses", busRoutes);
+router.use("/journeys", journeyRoutes);
 router.use("/bookings", bookingRoutes);
 
 module.exports = router;

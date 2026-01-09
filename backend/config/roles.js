@@ -5,13 +5,14 @@ const ROLES = {
 
 const ROLE_PERMISSIONS = {
   admin: [
-    "CREATE_BUS",
+    "MANAGE_LOCATIONS",
+    "MANAGE_BUSES",
+    "MANAGE_JOURNEYS",
     "VIEW_ALL_BOOKINGS",
     "RESET_BUS",
-    "VIEW_SALES_REPORT",
   ],
   user: [
-    "VIEW_BUSES",
+    "VIEW_JOURNEYS",
     "BOOK_SEAT",
     "VIEW_MY_TICKETS",
     "CANCEL_BOOKING",

@@ -1,27 +1,27 @@
 import { useEffect, useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { getBuses } from "../../api/bus.api";
+import { getJourneys } from "../../api/bus.api";
 import { AuthContext } from "../../context/AuthContext";
 
 export default function BusList() {
   const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [buses, setBuses] = useState([]);
+  const [journeys, setJourneys] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBuses = async () => {
+    const fetchJourneys = async () => {
       try {
-        const res = await getBuses();
-        setBuses(res.data);
+        const res = await getJourneys();
+        setJourneys(res.data);
       } catch (err) {
-        setError(err.response?.data?.message || "Failed to load buses");
+        setError(err.response?.data?.message || "Failed to load journeys");
       } finally {
         setLoading(false);
       }
     };
-    fetchBuses();
+    fetchJourneys();
   }, []);
 
   const handleLogout = () => {
@@ -32,7 +32,7 @@ export default function BusList() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h2 style={styles.title}>Available Buses</h2>
+        <h2 style={styles.title}>Available Journeys</h2>
         <div style={styles.nav}>
           <Link to="/my-tickets" style={styles.navLink}>My Tickets</Link>
           <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
@@ -40,25 +40,31 @@ export default function BusList() {
       </div>
       {error && <div style={styles.error}>{error}</div>}
       {loading ? (
-        <div style={styles.loading}>Loading buses...</div>
-      ) : buses.length === 0 ? (
-        <div style={styles.empty}>No buses available</div>
+        <div style={styles.loading}>Loading journeys...</div>
+      ) : journeys.length === 0 ? (
+        <div style={styles.empty}>No journeys available</div>
       ) : (
         <div style={styles.busGrid}>
-          {buses.map((b) => {
-            const availableSeats = b.seats.filter(s => !s.isBooked).length;
+          {journeys.map((j) => {
+            const availableSeats = j.availableSeats ?? 0;
             return (
-              <div key={b._id} style={styles.busCard}>
+              <div key={j._id} style={styles.busCard}>
                 <div style={styles.busHeader}>
-                  <h3 style={styles.busNumber}>{b.busNumber}</h3>
+                  <h3 style={styles.busNumber}>
+                    {j.source?.name} → {j.destination?.name}
+                  </h3>
                   <div style={styles.seatInfo}>{availableSeats} seats available</div>
                 </div>
                 <div style={styles.route}>
-                  <span style={styles.source}>{b.source}</span>
+                  <span style={styles.source}>{j.source?.name}</span>
                   <span style={styles.arrow}>→</span>
-                  <span style={styles.destination}>{b.destination}</span>
+                  <span style={styles.destination}>{j.destination?.name}</span>
                 </div>
-                <Link to={`/buses/${b._id}`} style={styles.viewBtn}>View Seats</Link>
+                <div style={styles.meta}>
+                  <span>Bus: {j.bus?.busNumber || "N/A"}</span>
+                  <span>Capacity: {j.bus?.seatCapacity || "--"}</span>
+                </div>
+                <Link to={`/journeys/${j._id}`} style={styles.viewBtn}>View Seats</Link>
               </div>
             );
           })}
@@ -174,5 +180,11 @@ const styles = {
     textDecoration: "none",
     borderRadius: "4px",
     marginTop: "1rem",
+  },
+  meta: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: "0.9rem",
+    color: "#555",
   },
 };

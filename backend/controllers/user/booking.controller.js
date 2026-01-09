@@ -1,17 +1,30 @@
 const Bus = require("../../models/Bus");
 const Booking = require("../../models/Booking");
+const Journey = require("../../models/Journey");
 
 /**
- * Book a seat on a bus
+ * Book a seat on a journey
  */
 exports.bookSeat = async (req, res, next) => {
   try {
-    const { busId, seatNumber } = req.body;
+    const { journeyId, seatNumber } = req.body;
 
-    const bus = await Bus.findById(busId);
-    if (!bus) {
-      return res.status(404).json({ message: "Bus not found" });
+    if (!journeyId || !seatNumber) {
+      return res
+        .status(400)
+        .json({ message: "Journey and seat number are required" });
     }
+
+    const journey = await Journey.findById(journeyId).populate(
+      "bus",
+      "busNumber seats"
+    );
+
+    if (!journey || !journey.bus) {
+      return res.status(404).json({ message: "Journey not found" });
+    }
+
+    const bus = journey.bus;
 
     const seat = bus.seats.find((s) => s.seatNumber === seatNumber);
     if (!seat) {
@@ -29,7 +42,8 @@ exports.bookSeat = async (req, res, next) => {
 
     const booking = await Booking.create({
       user: req.user.id,
-      bus: busId,
+      bus: bus._id,
+      journey: journeyId,
       seatNumber,
     });
 
@@ -47,8 +61,18 @@ exports.bookSeat = async (req, res, next) => {
  */
 exports.getMyBookings = async (req, res, next) => {
   try {
-    const bookings = await Booking.find({ user: req.user.id, status: "BOOKED" })
-      .populate("bus", "busNumber source destination")
+    const bookings = await Booking.find({
+      user: req.user.id,
+      status: "BOOKED",
+    })
+      .populate("bus", "busNumber seatCapacity")
+      .populate({
+        path: "journey",
+        populate: [
+          { path: "source", select: "name" },
+          { path: "destination", select: "name" },
+        ],
+      })
       .sort({ createdAt: -1 });
 
     res.status(200).json(bookings);

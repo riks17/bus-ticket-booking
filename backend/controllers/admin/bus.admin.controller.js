@@ -2,28 +2,28 @@ const Bus = require("../../models/Bus");
 const Booking = require("../../models/Booking");
 
 /**
- * Create a new bus with seat layout
+ * Create a new bus with generated seat layout
  */
 exports.createBus = async (req, res, next) => {
   try {
-    const { busNumber, source, destination, totalSeats } = req.body;
+    const { busNumber, seatCapacity } = req.body;
+
+    if (!busNumber || !seatCapacity) {
+      return res
+        .status(400)
+        .json({ message: "Bus number and seat capacity are required" });
+    }
 
     const existing = await Bus.findOne({ busNumber });
     if (existing) {
       return res.status(400).json({ message: "Bus already exists" });
     }
 
-    const seats = Array.from({ length: totalSeats }, (_, i) => ({
-      seatNumber: `S${i + 1}`,
-      isBooked: false,
-      bookedBy: null,
-    }));
+    const seats = Bus.generateSeats(Number(seatCapacity));
 
     const bus = await Bus.create({
       busNumber,
-      source,
-      destination,
-      totalSeats,
+      seatCapacity: Number(seatCapacity),
       seats,
     });
 
@@ -60,6 +60,18 @@ exports.resetBus = async (req, res, next) => {
     res.status(200).json({
       message: "Bus reset successfully",
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * List all buses (for admin dropdowns)
+ */
+exports.listBuses = async (req, res, next) => {
+  try {
+    const buses = await Bus.find().sort({ createdAt: -1 });
+    res.status(200).json(buses);
   } catch (err) {
     next(err);
   }
