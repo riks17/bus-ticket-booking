@@ -4,6 +4,7 @@ import { AuthProvider } from "./context/AuthContext";
 import UserLogin from "./pages/auth/UserLogin";
 import AdminLogin from "./pages/auth/AdminLogin";
 import Signup from "./pages/auth/Signup";
+import AdminSignup from "./pages/auth/AdminSignup";
 
 import BusList from "./pages/user/BusList";
 import BusDetails from "./pages/user/BusDetails";
@@ -25,6 +26,7 @@ function App() {
           <Route path="/" element={<UserLogin />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/signup" element={<AdminSignup />} />
 
           {/* User */}
           <Route element={<PrivateRoute />}>

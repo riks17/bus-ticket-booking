@@ -1,5 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client"; // Import socket.io-client
 import { getBusDetails, bookSeat } from "../../api/bus.api";
 
 export default function BusDetails() {
@@ -10,6 +11,7 @@ export default function BusDetails() {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
 
+  // Initial Fetch
   useEffect(() => {
     const fetchBus = async () => {
       try {
@@ -24,6 +26,47 @@ export default function BusDetails() {
     fetchBus();
   }, [busId]);
 
+  // Real-time Updates via Socket.io
+  useEffect(() => {
+    // Connect to the backend server
+    const socket = io("http://localhost:5001"); 
+
+    // Listen for single seat updates (Booking or Cancellation)
+    socket.on("seatUpdate", ({ busId: updatedBusId, seatNumber, action }) => {
+      if (updatedBusId === busId) {
+        setBus((prevBus) => {
+          if (!prevBus) return prevBus;
+          return {
+            ...prevBus,
+            seats: prevBus.seats.map((s) =>
+              s.seatNumber === seatNumber
+                ? { ...s, isBooked: action === "BOOKED" }
+                : s
+            ),
+          };
+        });
+      }
+    });
+
+    // Listen for full bus reset
+    socket.on("busReset", ({ busId: resetBusId }) => {
+      if (resetBusId === busId) {
+        setBus((prevBus) => {
+          if (!prevBus) return prevBus;
+          return {
+            ...prevBus,
+            seats: prevBus.seats.map((s) => ({ ...s, isBooked: false })),
+          };
+        });
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      socket.disconnect();
+    };
+  }, [busId]);
+
   const handleBookSeat = async (seatNumber) => {
     if (!window.confirm(`Book seat ${seatNumber}?`)) return;
 
@@ -32,9 +75,8 @@ export default function BusDetails() {
 
     try {
       await bookSeat({ busId, seatNumber });
-      // Refresh bus data
-      const res = await getBusDetails(busId);
-      setBus(res.data);
+      // Note: We don't strictly need to refetch here anymore because
+      // the socket event will update the UI, but keeping it for safety is fine.
       alert(`Seat ${seatNumber} booked successfully!`);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to book seat");

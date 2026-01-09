@@ -1,13 +1,16 @@
-import { useContext, useState } from "react";
+import { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { adminLogin } from "../../api/auth.api";
+import { adminSignup } from "../../api/auth.api";
 import { AuthContext } from "../../context/AuthContext";
 
-export default function AdminLogin() {
+export default function AdminSignup() {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -17,11 +20,11 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const res = await adminLogin({ email, password });
-      login(res.data.token, "admin");
-      navigate("/admin");
+      const res = await adminSignup(form);
+      login(res.data.token, "user");
+      navigate("/buses");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Please try again.");
+      setError(err.response?.data?.message || "Signup failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -30,31 +33,38 @@ export default function AdminLogin() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Admin Login</h2>
+        <h2 style={styles.title}>Admin Signup</h2>
         {error && <div style={styles.error}>{error}</div>}
         <form onSubmit={handleSubmit}>
           <input
             style={styles.input}
-            placeholder="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
           />
           <input
             style={styles.input}
-            placeholder="Password"
+            placeholder="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            required
+          />
+          <input
+            style={styles.input}
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
           />
           <button type="submit" style={styles.button} disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
+            {loading ? "Signing up..." : "Signup"}
           </button>
         </form>
         <div style={styles.linkContainer}>
-          <Link to="/admin/signup" style={styles.link}>Create Admin Account</Link>
+          <Link to="/admin/login" style={styles.link}>Already have an account? Login</Link>
         </div>
       </div>
     </div>
@@ -94,12 +104,13 @@ const styles = {
   button: {
     width: "100%",
     padding: "0.75rem",
-    backgroundColor: "#007bff",
+    backgroundColor: "#28a745",
     color: "white",
     border: "none",
     borderRadius: "4px",
     fontSize: "1rem",
     cursor: "pointer",
+    marginBottom: "1rem",
   },
   error: {
     color: "#dc3545",
@@ -107,5 +118,12 @@ const styles = {
     padding: "0.5rem",
     backgroundColor: "#f8d7da",
     borderRadius: "4px",
+  },
+  linkContainer: {
+    textAlign: "center",
+  },
+  link: {
+    color: "#007bff",
+    textDecoration: "none",
   },
 };

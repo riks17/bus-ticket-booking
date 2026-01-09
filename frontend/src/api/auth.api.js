@@ -11,3 +11,7 @@ export const userSignup = (data) => {
 export const adminLogin = (data) => {
   return api.post("/auth/admin/login", data);
 };
+
+export const adminSignup = (data) => {
+  return api.post("/auth/admin/signup", data);
+};
